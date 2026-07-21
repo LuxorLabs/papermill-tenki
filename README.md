@@ -25,10 +25,11 @@ export TENKI_PROJECT_ID=...          # project to create sandboxes in
 
 ## Usage
 
-CLI:
+CLI (`-p name value` injects a notebook parameter, only if the notebook has a
+`parameters` cell that declares it):
 
 ```bash
-papermill input.ipynb output.ipynb --engine tenki -p alpha 0.5
+papermill input.ipynb output.ipynb --engine tenki -p learning_rate 0.5
 ```
 
 Python:
@@ -40,12 +41,16 @@ papermill.execute_notebook(
     "input.ipynb",
     "output.ipynb",
     engine_name="tenki",
-    parameters={"alpha": 0.5},
-    # optional engine kwargs (override env vars):
+    # notebook parameters — only for notebooks with a `parameters` cell; omit otherwise:
+    parameters={"learning_rate": 0.5},
+    # optional engine kwargs (override env vars); see Configuration below:
     # project_id="...", image="...", sandbox_name="my-run",
-    # cpu_cores=4, memory_mb=8192, bootstrap=False,
+    # cpu_cores=4, memory_mb=8192,
 )
 ```
+
+`bootstrap` is enabled by default and installs the jupyter toolchain in the
+sandbox for you — only set `bootstrap=False` if your `image` already has it.
 
 ## Configuration
 
