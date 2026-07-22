@@ -62,6 +62,8 @@ sandbox for you — only set `bootstrap=False` if your `image` already has it.
 | `bootstrap`    | `TENKI_BOOTSTRAP`  | enabled     | pip-install nbconvert/ipykernel when missing   |
 | `cpu_cores`    | —                  | Tenki default | Sandbox CPU cores                            |
 | `memory_mb`    | —                  | Tenki default | Sandbox memory                               |
+| `max_duration` | —                  | from `execution_timeout` | Lifetime backstop (s); a crashed run can't orphan the VM |
+| `create_timeout` | —                | `300`       | Seconds to wait for the sandbox to reach RUNNING |
 
 `TENKI_API_KEY` is read by the Tenki SDK itself.
 

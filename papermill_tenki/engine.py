@@ -22,6 +22,7 @@ REMOTE_OUTPUT = f"{REMOTE_DIR}/output.ipynb"
 # (Ubuntu 24.04) ships python3 without pip/ensurepip, so pip itself may need to
 # be apt-installed first; PIP_BREAK_SYSTEM_PACKAGES covers PEP 668 images.
 BOOTSTRAP_CMD = (
+    "set -e; "  # fail fast so an early apt/pip error isn't masked by a later success
     "command -v pip3 >/dev/null 2>&1 "
     "|| (sudo apt-get update -qq && sudo apt-get install -y -qq python3-pip); "
     "PIP_BREAK_SYSTEM_PACKAGES=1 python3 -m pip install --quiet "
@@ -39,6 +40,15 @@ KERNELSPEC_CMD = (
 
 # Extra slack on top of execution_timeout for kernel startup + notebook I/O.
 EXEC_TIMEOUT_SLACK = 120
+
+# Sandbox lifetime backstop: even if the local process is killed and teardown
+# never runs, the VM self-terminates instead of leaking. Derived from
+# execution_timeout when known (plus overhead for provisioning + bootstrap),
+# otherwise a fixed default.
+MAX_DURATION_OVERHEAD = 1200
+DEFAULT_MAX_DURATION = 3600
+# Bound provisioning so create() can't hang forever waiting for RUNNING.
+DEFAULT_CREATE_TIMEOUT = 300
 
 
 class TenkiRemoteExecutionError(PapermillException):
@@ -61,6 +71,11 @@ class TenkiEngine(Engine):
                                             sandbox when missing (default enabled;
                                             set TENKI_BOOTSTRAP=0 to disable)
         cpu_cores, memory_mb             -- sandbox resources (optional)
+        max_duration                     -- sandbox lifetime backstop in seconds; a
+                                            crashed local process can't orphan the VM
+                                            (default derived from execution_timeout)
+        create_timeout                   -- seconds to wait for the sandbox to reach
+                                            RUNNING before giving up (default 300)
     """
 
     @classmethod
@@ -77,6 +92,8 @@ class TenkiEngine(Engine):
         bootstrap=None,
         cpu_cores=None,
         memory_mb=None,
+        max_duration=None,
+        create_timeout=None,
         **kwargs,
     ):
         project_id = project_id or os.environ.get("TENKI_PROJECT_ID")
@@ -89,7 +106,19 @@ class TenkiEngine(Engine):
         if bootstrap is None:
             bootstrap = os.environ.get("TENKI_BOOTSTRAP", "1") not in ("0", "false", "no")
 
-        create_kwargs = {"name": sandbox_name, "project_id": project_id}
+        if max_duration is None:
+            max_duration = (
+                execution_timeout + MAX_DURATION_OVERHEAD
+                if execution_timeout
+                else DEFAULT_MAX_DURATION
+            )
+
+        create_kwargs = {
+            "name": sandbox_name,
+            "project_id": project_id,
+            "max_duration": max_duration,
+            "timeout": create_timeout or DEFAULT_CREATE_TIMEOUT,
+        }
         if image:
             create_kwargs["image"] = image
         if cpu_cores:
@@ -121,9 +150,9 @@ class TenkiEngine(Engine):
                     logger.info("remote stdout:\n%s", res.stdout_text)
 
                 downloaded = cls._try_download(sb, local_out)
-                if res.exit_code != 0 and not downloaded:
+                if not res.ok and not downloaded:
                     raise TenkiRemoteExecutionError(
-                        f"remote notebook execution failed (exit {res.exit_code}):\n"
+                        f"remote notebook execution failed ({cls._describe(res)}):\n"
                         f"{res.stderr_text[-4000:]}"
                     )
 
@@ -138,7 +167,7 @@ class TenkiEngine(Engine):
     @classmethod
     def _ensure_jupyter(cls, sb, bootstrap):
         """Verify the sandbox can run nbconvert, installing the toolchain if allowed."""
-        if sb.exec("bash", "-lc", TOOLCHAIN_PROBE).exit_code == 0:
+        if sb.exec("bash", "-lc", TOOLCHAIN_PROBE).ok:
             return
         if not bootstrap:
             raise PapermillException(
@@ -147,19 +176,22 @@ class TenkiEngine(Engine):
             )
         logger.info("bootstrapping jupyter toolchain in sandbox")
         res = sb.exec("bash", "-lc", BOOTSTRAP_CMD, timeout=600)
-        if res.exit_code != 0 or sb.exec("bash", "-lc", TOOLCHAIN_PROBE).exit_code != 0:
+        if not res.ok or not sb.exec("bash", "-lc", TOOLCHAIN_PROBE).ok:
             raise PapermillException(
-                f"failed to bootstrap jupyter toolchain in sandbox:\n{res.stderr_text[-2000:]}"
+                f"failed to bootstrap jupyter toolchain in sandbox ({cls._describe(res)}):\n"
+                f"{res.stderr_text[-2000:]}"
             )
 
     @classmethod
     def _resolve_kernel(cls, sb, kernel_name):
         """Map the requested kernel to one available in the sandbox."""
         res = sb.exec("bash", "-lc", KERNELSPEC_CMD)
-        try:
-            available = set(json.loads(res.stdout_text).get("kernelspecs", {}))
-        except (json.JSONDecodeError, ValueError):
-            available = set()
+        available = set()
+        if res.ok:
+            try:
+                available = set(json.loads(res.stdout_text).get("kernelspecs", {}))
+            except (json.JSONDecodeError, ValueError):
+                available = set()
 
         # Requested kernel exists remotely: use it as-is.
         if not kernel_name or kernel_name in available:
@@ -199,3 +231,16 @@ class TenkiEngine(Engine):
             return local_out.exists() and local_out.stat().st_size > 0
         except Exception:
             return False
+
+    @classmethod
+    def _describe(cls, res):
+        """Failure diagnostics beyond exit code: a signal or reason is why an
+        exit_code of 0 can still be a failure (e.g. SIGKILL)."""
+        parts = [f"exit={res.exit_code}"]
+        if res.signal:
+            parts.append(f"signal={res.signal}")
+        if res.reason:
+            parts.append(f"reason={res.reason}")
+        if res.errno:
+            parts.append(f"errno={res.errno}")
+        return ", ".join(parts)
