@@ -1,6 +1,8 @@
 """Unit tests for TenkiEngine with a mocked Sandbox (no network, no API key)."""
 
 import json
+import subprocess
+import sys
 from unittest.mock import MagicMock, patch
 
 import nbformat
@@ -168,3 +170,15 @@ def test_engine_registered_via_entry_point():
     from papermill.engines import papermill_engines
 
     assert papermill_engines.get_engine("tenki") is TenkiEngine
+
+
+def test_import_before_papermill_does_not_circular_import():
+    # A fresh process where papermill_tenki is imported first must not crash on
+    # papermill's eager entry-point registration. Run in a subprocess so the
+    # import order is not polluted by this test module's own imports.
+    result = subprocess.run(
+        [sys.executable, "-c", "import papermill_tenki; papermill_tenki.TenkiEngine"],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
