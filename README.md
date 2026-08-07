@@ -20,7 +20,6 @@ pip install papermill-tenki
 
 ```bash
 export TENKI_API_KEY=tk_...          # from your Tenki workspace settings
-export TENKI_PROJECT_ID=...          # project to create sandboxes in
 ```
 
 ## Usage
@@ -44,7 +43,7 @@ papermill.execute_notebook(
     # notebook parameters — only for notebooks with a `parameters` cell; omit otherwise:
     parameters={"learning_rate": 0.5},
     # optional engine kwargs (override env vars); see Configuration below:
-    # project_id="...", image="...", sandbox_name="my-run",
+    # image="...", sandbox_name="my-run",
     # cpu_cores=4, memory_mb=8192,
 )
 ```
@@ -56,7 +55,6 @@ sandbox for you — only set `bootstrap=False` if your `image` already has it.
 
 | Engine kwarg   | Env var            | Default     | Meaning                                        |
 | -------------- | ------------------ | ----------- | ---------------------------------------------- |
-| `project_id`   | `TENKI_PROJECT_ID` | — (required)| Tenki project the sandbox is created in        |
 | `image`        | `TENKI_IMAGE`      | Tenki default | Sandbox image                                |
 | `sandbox_name` | —                  | `papermill` | Sandbox display name                           |
 | `bootstrap`    | `TENKI_BOOTSTRAP`  | enabled     | pip-install nbconvert/ipykernel when missing   |
@@ -65,7 +63,8 @@ sandbox for you — only set `bootstrap=False` if your `image` already has it.
 | `max_duration` | —                  | from `execution_timeout` | Lifetime backstop (s); a crashed run can't orphan the VM |
 | `create_timeout` | —                | `300`       | Seconds to wait for the sandbox to reach RUNNING |
 
-`TENKI_API_KEY` is read by the Tenki SDK itself.
+`TENKI_API_KEY` is read by the Tenki SDK itself, which also resolves the
+workspace the sandbox is created in.
 
 Notebook dependencies (numpy, pandas, ...) must exist in the sandbox: bake
 them into a custom `image`, or add a bootstrap cell at the top of the notebook.
@@ -84,5 +83,5 @@ remote `nbconvert` run (`startup_timeout` / `timeout` on the
 ```bash
 pip install -e .[dev]
 pytest                       # unit tests, fully mocked, no network
-TENKI_API_KEY=... TENKI_PROJECT_ID=... pytest tests/test_live_smoke.py   # live smoke test
+TENKI_API_KEY=... pytest tests/test_live_smoke.py   # live smoke test
 ```

@@ -10,7 +10,7 @@ from pathlib import Path
 import nbformat
 from papermill.engines import Engine
 from papermill.exceptions import PapermillException
-from tenki_sandbox import Sandbox
+from tenki import Sandbox
 
 logger = logging.getLogger("papermill.tenki")
 
@@ -64,7 +64,6 @@ class TenkiEngine(Engine):
     twice) -> download -> copy executed cells back into `nb_man.nb`.
 
     Configuration (engine kwargs override environment variables):
-        project_id   / TENKI_PROJECT_ID  -- Tenki project to create the sandbox in (required)
         image        / TENKI_IMAGE       -- sandbox image (optional)
         sandbox_name                     -- sandbox display name (default "papermill")
         bootstrap    / TENKI_BOOTSTRAP   -- pip-install the jupyter toolchain in the
@@ -86,7 +85,6 @@ class TenkiEngine(Engine):
         log_output=False,
         start_timeout=60,
         execution_timeout=None,
-        project_id=None,
         image=None,
         sandbox_name="papermill",
         bootstrap=None,
@@ -96,12 +94,6 @@ class TenkiEngine(Engine):
         create_timeout=None,
         **kwargs,
     ):
-        project_id = project_id or os.environ.get("TENKI_PROJECT_ID")
-        if not project_id:
-            raise PapermillException(
-                "Tenki project id is required: pass engine kwarg 'project_id' "
-                "or set TENKI_PROJECT_ID"
-            )
         image = image or os.environ.get("TENKI_IMAGE")
         if bootstrap is None:
             bootstrap = os.environ.get("TENKI_BOOTSTRAP", "1") not in ("0", "false", "no")
@@ -115,7 +107,6 @@ class TenkiEngine(Engine):
 
         create_kwargs = {
             "name": sandbox_name,
-            "project_id": project_id,
             "max_duration": max_duration,
             "timeout": create_timeout or DEFAULT_CREATE_TIMEOUT,
         }
@@ -131,7 +122,7 @@ class TenkiEngine(Engine):
             local_out = Path(tmp) / "output.ipynb"
             nbformat.write(nb_man.nb, str(local_in))
 
-            logger.info("creating tenki sandbox (project_id=%s image=%s)", project_id, image)
+            logger.info("creating tenki sandbox (image=%s)", image)
             with Sandbox.create(**create_kwargs) as sb:
                 cls._ensure_jupyter(sb, bootstrap)
                 kernel = cls._resolve_kernel(sb, kernel_name)

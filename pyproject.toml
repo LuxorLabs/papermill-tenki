@@ -27,7 +27,7 @@ classifiers = [
 ]
 dependencies = [
     "papermill>=2.5",
-    "tenki-sandbox>=0.4",
+    "tenki>=0.5.4",
     "nbformat>=5.0",
 ]
 

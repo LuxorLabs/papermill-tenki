@@ -1,6 +1,6 @@
 """Live smoke test: runs a real notebook in a real Tenki sandbox.
 
-Requires TENKI_API_KEY and TENKI_PROJECT_ID in the environment; skipped otherwise.
+Requires TENKI_API_KEY in the environment; skipped otherwise.
 """
 
 import os
@@ -11,8 +11,8 @@ import pytest
 from nbformat.v4 import new_code_cell, new_notebook
 
 pytestmark = pytest.mark.skipif(
-    not (os.environ.get("TENKI_API_KEY") and os.environ.get("TENKI_PROJECT_ID")),
-    reason="TENKI_API_KEY / TENKI_PROJECT_ID not set",
+    not os.environ.get("TENKI_API_KEY"),
+    reason="TENKI_API_KEY not set",
 )
 
 

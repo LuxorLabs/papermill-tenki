@@ -9,7 +9,7 @@ import nbformat
 import pytest
 from nbformat.v4 import new_code_cell, new_notebook, new_output
 from papermill.exceptions import PapermillException
-from tenki_sandbox import CommandResult
+from tenki import CommandResult
 
 from papermill_tenki import TenkiEngine, TenkiRemoteExecutionError
 from papermill_tenki.engine import (
@@ -28,7 +28,7 @@ def make_notebook():
     return nb
 
 
-def result(exit_code=0, stdout=b"", stderr=b"", signal=0):
+def result(exit_code=0, stdout=b"", stderr=b"", signal=None):
     return CommandResult(
         argv=["bash"], exit_code=exit_code, stdout=stdout, stderr=stderr, signal=signal
     )
@@ -96,7 +96,6 @@ def run_engine(sandbox, nb=None, kernel_name="python3", **kwargs):
             nb or make_notebook(),
             kernel_name,
             progress_bar=False,
-            project_id=kwargs.pop("project_id", "proj-123"),
             **kwargs,
         )
     return out, sandbox_cls
@@ -109,7 +108,6 @@ def test_success_merges_executed_cells():
     sandbox_cls.create.assert_called_once()
     create_kwargs = sandbox_cls.create.call_args.kwargs
     assert create_kwargs["name"] == "papermill"
-    assert create_kwargs["project_id"] == "proj-123"
     sb.fs.upload.assert_called_once()
     sb.fs.download.assert_called_once()
     assert [c.outputs[0]["text"] for c in nb.cells] == ["cell-0\n", "cell-1\n"]
@@ -128,23 +126,6 @@ def test_nbconvert_command_shape():
     # exec call is bounded with slack on top of the notebook timeout
     kwargs = sb.exec_kwargs[sb.commands.index(cmd)]
     assert kwargs == {"timeout": 420}
-
-
-def test_missing_project_id_raises(monkeypatch):
-    monkeypatch.delenv("TENKI_PROJECT_ID", raising=False)
-    with patch("papermill_tenki.engine.Sandbox"):
-        with pytest.raises(PapermillException, match="project id is required"):
-            TenkiEngine.execute_notebook(make_notebook(), "python3", progress_bar=False)
-
-
-def test_project_id_from_env(monkeypatch):
-    monkeypatch.setenv("TENKI_PROJECT_ID", "proj-env")
-    sb = FakeSandbox()
-    with patch("papermill_tenki.engine.Sandbox") as sandbox_cls:
-        sandbox_cls.create.return_value = sb
-        TenkiEngine.execute_notebook(make_notebook(), "python3", progress_bar=False)
-    sandbox_cls.create.assert_called_once()
-    assert sandbox_cls.create.call_args.kwargs["project_id"] == "proj-env"
 
 
 def test_remote_failure_raises_with_stderr():
@@ -180,8 +161,8 @@ def test_engine_registered_via_entry_point():
 
 def test_sigkill_reads_as_failure_not_success():
     # exit_code 0 but a signal set => not ok => must raise, not silently "succeed".
-    sb = FakeSandbox(nbconvert=result(exit_code=0, signal=9, stderr=b"killed"))
-    with pytest.raises(TenkiRemoteExecutionError, match="signal=9"):
+    sb = FakeSandbox(nbconvert=result(exit_code=0, signal="SIGKILL", stderr=b"killed"))
+    with pytest.raises(TenkiRemoteExecutionError, match="signal=SIGKILL"):
         run_engine(sb)
 
 
@@ -189,9 +170,7 @@ def test_create_failure_propagates_without_crash():
     with patch("papermill_tenki.engine.Sandbox") as sandbox_cls:
         sandbox_cls.create.side_effect = RuntimeError("provisioning failed")
         with pytest.raises(RuntimeError, match="provisioning failed"):
-            TenkiEngine.execute_notebook(
-                make_notebook(), "python3", progress_bar=False, project_id="proj-123"
-            )
+            TenkiEngine.execute_notebook(make_notebook(), "python3", progress_bar=False)
 
 
 def test_max_duration_and_create_timeout_passed_to_create():
