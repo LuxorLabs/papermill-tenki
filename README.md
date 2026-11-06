@@ -55,9 +55,9 @@ sandbox for you — only set `bootstrap=False` if your `image` already has it.
 
 | Engine kwarg   | Env var            | Default     | Meaning                                        |
 | -------------- | ------------------ | ----------- | ---------------------------------------------- |
-| `image`        | `TENKI_IMAGE`      | Tenki default | Sandbox image                                |
+| `image`        | `LUXORAI_IMAGE` (or `TENKI_IMAGE`) | Tenki default | Sandbox image                |
 | `sandbox_name` | —                  | `papermill` | Sandbox display name                           |
-| `bootstrap`    | `TENKI_BOOTSTRAP`  | enabled     | pip-install nbconvert/ipykernel when missing   |
+| `bootstrap`    | `LUXORAI_BOOTSTRAP` (or `TENKI_BOOTSTRAP`) | enabled | pip-install nbconvert/ipykernel when missing |
 | `cpu_cores`    | —                  | Tenki default | Sandbox CPU cores                            |
 | `memory_mb`    | —                  | Tenki default | Sandbox memory                               |
 | `max_duration` | —                  | from `execution_timeout` | Lifetime backstop (s); a crashed run can't orphan the VM |
