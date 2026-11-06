@@ -1,6 +1,8 @@
 name: Release
 
-# Publishes to PyPI when a version tag (e.g. v0.1.2) is pushed.
+# Publishes to PyPI when a version tag (e.g. v0.1.2) is pushed. The same
+# sources also ship as papermill-luxor-ai (only [project].name differs) when
+# the repo variable LUXORAI_PUBLISH is 'true'.
 on:
   push:
     tags: ["v*"]
@@ -17,14 +19,36 @@ jobs:
         run: |
           pip install build
           python -m build
+      - name: Build papermill-luxor-ai
+        run: |
+          set -euo pipefail
+          src="$RUNNER_TEMP/luxor-ai"
+          mkdir -p "$src"
+          git archive HEAD | tar -x -C "$src"
+          python - "$src/pyproject.toml" <<'PY'
+          import sys, tomllib
+          path = sys.argv[1]
+          text = open(path).read()
+          old, new = 'name = "papermill-tenki"\n', 'name = "papermill-luxor-ai"\n'
+          if text.count(old) != 1:
+              sys.exit(f"expected exactly one {old.strip()!r} in pyproject.toml")
+          text = text.replace(old, new)
+          assert tomllib.loads(text)["project"]["name"] == "papermill-luxor-ai"
+          open(path, "w").write(text)
+          PY
+          python -m build "$src" --outdir dist-luxor-ai
       - name: Check artifacts
         run: |
           pip install twine
-          twine check dist/*
+          twine check dist/* dist-luxor-ai/*
       - uses: actions/upload-artifact@v4
         with:
           name: dist
           path: dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-luxor-ai
+          path: dist-luxor-ai/
 
   publish:
     needs: build
@@ -38,4 +62,21 @@ jobs:
           name: dist
           path: dist/
       - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+  # Needs a PyPI (pending) trusted publisher for papermill-luxor-ai naming this
+  # workflow (release.yml) and the pypi environment.
+  publish-luxor-ai:
+    needs: build
+    if: vars.LUXORAI_PUBLISH == 'true'
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist-luxor-ai
+          path: dist/
+      - name: Publish papermill-luxor-ai to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
