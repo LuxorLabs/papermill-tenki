@@ -191,3 +191,24 @@ def test_import_before_papermill_does_not_circular_import():
         text=True,
     )
     assert result.returncode == 0, result.stderr
+
+
+def test_luxorai_image_env_wins_over_tenki(monkeypatch):
+    monkeypatch.setenv("LUXORAI_IMAGE", "luxor-img")
+    monkeypatch.setenv("TENKI_IMAGE", "tenki-img")
+    _, sandbox_cls = run_engine(FakeSandbox())
+    assert sandbox_cls.create.call_args.kwargs["image"] == "luxor-img"
+
+
+def test_tenki_image_env_still_read(monkeypatch):
+    monkeypatch.delenv("LUXORAI_IMAGE", raising=False)
+    monkeypatch.setenv("TENKI_IMAGE", "tenki-img")
+    _, sandbox_cls = run_engine(FakeSandbox())
+    assert sandbox_cls.create.call_args.kwargs["image"] == "tenki-img"
+
+
+def test_luxorai_bootstrap_env_disables(monkeypatch):
+    monkeypatch.setenv("LUXORAI_BOOTSTRAP", "0")
+    monkeypatch.setenv("TENKI_BOOTSTRAP", "1")
+    with pytest.raises(PapermillException, match="bootstrap is disabled"):
+        run_engine(FakeSandbox(jupyter_present=False))

@@ -14,6 +14,15 @@ from tenki import Sandbox
 
 logger = logging.getLogger("papermill.tenki")
 
+
+def _env(name, default=None):
+    """Read LUXORAI_<name>, falling back to TENKI_<name>."""
+    for prefix in ("LUXORAI_", "TENKI_"):
+        value = os.environ.get(prefix + name)
+        if value:
+            return value
+    return default
+
 REMOTE_DIR = "/home/tenki/papermill"
 REMOTE_INPUT = f"{REMOTE_DIR}/input.ipynb"
 REMOTE_OUTPUT = f"{REMOTE_DIR}/output.ipynb"
@@ -64,11 +73,13 @@ class TenkiEngine(Engine):
     twice) -> download -> copy executed cells back into `nb_man.nb`.
 
     Configuration (engine kwargs override environment variables):
-        image        / TENKI_IMAGE       -- sandbox image (optional)
+        image        / LUXORAI_IMAGE     -- sandbox image (optional; TENKI_IMAGE
+                                            is still read as a fallback)
         sandbox_name                     -- sandbox display name (default "papermill")
-        bootstrap    / TENKI_BOOTSTRAP   -- pip-install the jupyter toolchain in the
+        bootstrap    / LUXORAI_BOOTSTRAP -- pip-install the jupyter toolchain in the
                                             sandbox when missing (default enabled;
-                                            set TENKI_BOOTSTRAP=0 to disable)
+                                            set LUXORAI_BOOTSTRAP=0 to disable;
+                                            TENKI_BOOTSTRAP is still read)
         cpu_cores, memory_mb             -- sandbox resources (optional)
         max_duration                     -- sandbox lifetime backstop in seconds; a
                                             crashed local process can't orphan the VM
@@ -94,9 +105,9 @@ class TenkiEngine(Engine):
         create_timeout=None,
         **kwargs,
     ):
-        image = image or os.environ.get("TENKI_IMAGE")
+        image = image or _env("IMAGE")
         if bootstrap is None:
-            bootstrap = os.environ.get("TENKI_BOOTSTRAP", "1") not in ("0", "false", "no")
+            bootstrap = _env("BOOTSTRAP", "1") not in ("0", "false", "no")
 
         if max_duration is None:
             max_duration = (
