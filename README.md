@@ -53,18 +53,21 @@ sandbox for you — only set `bootstrap=False` if your `image` already has it.
 
 ## Configuration
 
-| Engine kwarg   | Env var            | Default     | Meaning                                        |
-| -------------- | ------------------ | ----------- | ---------------------------------------------- |
-| `image`        | `LUXORAI_IMAGE` (or `TENKI_IMAGE`) | Tenki default | Sandbox image                |
-| `sandbox_name` | —                  | `papermill` | Sandbox display name                           |
-| `bootstrap`    | `LUXORAI_BOOTSTRAP` (or `TENKI_BOOTSTRAP`) | enabled | pip-install nbconvert/ipykernel when missing |
-| `cpu_cores`    | —                  | Tenki default | Sandbox CPU cores                            |
-| `memory_mb`    | —                  | Tenki default | Sandbox memory                               |
-| `max_duration` | —                  | from `execution_timeout` | Lifetime backstop (s); a crashed run can't orphan the VM |
-| `create_timeout` | —                | `300`       | Seconds to wait for the sandbox to reach RUNNING |
+| Engine kwarg     | Env var                                  | Default                  | Meaning                                                  |
+| ---------------- | ---------------------------------------- | ------------------------ | -------------------------------------------------------- |
+| `image`          | `LUXOR_IMAGE` (or `TENKI_IMAGE`)         | Tenki default            | Sandbox image                                            |
+| `sandbox_name`   | -                                        | `papermill`              | Sandbox display name                                     |
+| `bootstrap`      | `LUXOR_BOOTSTRAP` (or `TENKI_BOOTSTRAP`) | enabled                  | pip-install nbconvert/ipykernel when missing             |
+| `cpu_cores`      | -                                        | Tenki default            | Sandbox CPU cores                                        |
+| `memory_mb`      | -                                        | Tenki default            | Sandbox memory                                           |
+| `max_duration`   | -                                        | from `execution_timeout` | Lifetime backstop (s); a crashed run can't orphan the VM |
+| `create_timeout` | -                                        | `300`                    | Seconds to wait for the sandbox to reach RUNNING         |
 
-`TENKI_API_KEY` is read by the Tenki SDK itself, which also resolves the
-workspace the sandbox is created in.
+The API key is read by the Tenki SDK itself (this package never reads it),
+which also resolves the workspace the sandbox is created in.
+It reads `LUXOR_API_KEY` first and falls back to `TENKI_API_KEY`.
+`LUXOR_API_KEY` is only used when it starts with `lx_` or `tk_`; any other
+value is ignored.
 
 Notebook dependencies (numpy, pandas, ...) must exist in the sandbox: bake
 them into a custom `image`, or add a bootstrap cell at the top of the notebook.
