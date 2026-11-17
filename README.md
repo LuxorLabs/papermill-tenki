@@ -65,9 +65,9 @@ sandbox for you — only set `bootstrap=False` if your `image` already has it.
 
 The API key is read by the Tenki SDK itself (this package never reads it),
 which also resolves the workspace the sandbox is created in.
-`TENKI_API_KEY` works with every supported SDK version; SDK 1.5.3 and later
-also read `LUXOR_API_KEY` first. `LUXOR_API_KEY` is only used when it starts
-with `lx_` or `tk_`; any other value is ignored.
+It reads `LUXOR_API_KEY` first and falls back to `TENKI_API_KEY`.
+`LUXOR_API_KEY` is only used when it starts with `lx_` or `tk_`; any other
+value is ignored.
 
 Notebook dependencies (numpy, pandas, ...) must exist in the sandbox: bake
 them into a custom `image`, or add a bootstrap cell at the top of the notebook.
