@@ -7,5 +7,5 @@ import papermill.engines  # noqa: F401
 
 from .engine import TenkiEngine, TenkiRemoteExecutionError
 
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 __all__ = ["TenkiEngine", "TenkiRemoteExecutionError"]
