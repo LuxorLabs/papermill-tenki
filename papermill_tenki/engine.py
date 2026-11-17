@@ -16,8 +16,8 @@ logger = logging.getLogger("papermill.tenki")
 
 
 def _env(name, default=None):
-    """Read LUXORAI_<name>, falling back to TENKI_<name>."""
-    for prefix in ("LUXORAI_", "TENKI_"):
+    """Read LUXOR_<name>, falling back to TENKI_<name>."""
+    for prefix in ("LUXOR_", "TENKI_"):
         value = os.environ.get(prefix + name)
         if value:
             return value
@@ -73,12 +73,12 @@ class TenkiEngine(Engine):
     twice) -> download -> copy executed cells back into `nb_man.nb`.
 
     Configuration (engine kwargs override environment variables):
-        image        / LUXORAI_IMAGE     -- sandbox image (optional; TENKI_IMAGE
+        image        / LUXOR_IMAGE       -- sandbox image (optional; TENKI_IMAGE
                                             is still read as a fallback)
         sandbox_name                     -- sandbox display name (default "papermill")
-        bootstrap    / LUXORAI_BOOTSTRAP -- pip-install the jupyter toolchain in the
+        bootstrap    / LUXOR_BOOTSTRAP   -- pip-install the jupyter toolchain in the
                                             sandbox when missing (default enabled;
-                                            set LUXORAI_BOOTSTRAP=0 to disable;
+                                            set LUXOR_BOOTSTRAP=0 to disable;
                                             TENKI_BOOTSTRAP is still read)
         cpu_cores, memory_mb             -- sandbox resources (optional)
         max_duration                     -- sandbox lifetime backstop in seconds; a
