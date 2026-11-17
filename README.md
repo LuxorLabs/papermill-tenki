@@ -56,12 +56,12 @@ sandbox for you — only set `bootstrap=False` if your `image` already has it.
 | Engine kwarg     | Env var                                  | Default                  | Meaning                                                  |
 | ---------------- | ---------------------------------------- | ------------------------ | -------------------------------------------------------- |
 | `image`          | `LUXOR_IMAGE` (or `TENKI_IMAGE`)         | Tenki default            | Sandbox image                                            |
-| `sandbox_name`   | —                                        | `papermill`              | Sandbox display name                                     |
+| `sandbox_name`   | -                                        | `papermill`              | Sandbox display name                                     |
 | `bootstrap`      | `LUXOR_BOOTSTRAP` (or `TENKI_BOOTSTRAP`) | enabled                  | pip-install nbconvert/ipykernel when missing             |
-| `cpu_cores`      | —                                        | Tenki default            | Sandbox CPU cores                                        |
-| `memory_mb`      | —                                        | Tenki default            | Sandbox memory                                           |
-| `max_duration`   | —                                        | from `execution_timeout` | Lifetime backstop (s); a crashed run can't orphan the VM |
-| `create_timeout` | —                                        | `300`                    | Seconds to wait for the sandbox to reach RUNNING         |
+| `cpu_cores`      | -                                        | Tenki default            | Sandbox CPU cores                                        |
+| `memory_mb`      | -                                        | Tenki default            | Sandbox memory                                           |
+| `max_duration`   | -                                        | from `execution_timeout` | Lifetime backstop (s); a crashed run can't orphan the VM |
+| `create_timeout` | -                                        | `300`                    | Seconds to wait for the sandbox to reach RUNNING         |
 
 The API key is read by the Tenki SDK itself (this package never reads it),
 which also resolves the workspace the sandbox is created in.
